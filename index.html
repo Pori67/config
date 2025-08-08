@@ -103,6 +103,7 @@
         .btn-primary:hover { background: #1f6feb; box-shadow: 0 0 15px rgba(47, 129, 247, 0.5); }
         .btn-success { background: var(--success-color); border-color: var(--success-color); color: #fff; }
         .btn-success:hover { background: #2ea043; box-shadow: 0 0 15px rgba(35, 134, 54, 0.5); }
+        .btn-active { background: var(--accent-color); border-color: var(--accent-color); color: #fff; }
         
         .status-badge {
             display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
@@ -169,6 +170,13 @@
                         </div>
                     </div>
                 </div>
+                <div class="mt-6 flex flex-wrap gap-4 justify-center">
+                    <button data-filter="all" class="filter-btn btn btn-primary px-4 py-2">همه</button>
+                    <button data-filter="vless" class="filter-btn btn px-4 py-2">VLESS</button>
+                    <button data-filter="vmess" class="filter-btn btn px-4 py-2">VMess</button>
+                    <button data-filter="trojan" class="filter-btn btn px-4 py-2">Trojan</button>
+                    <button data-filter="ss" class="filter-btn btn px-4 py-2">Shadowsocks</button>
+                </div>
             </div>
         </section>
 
@@ -206,6 +214,7 @@
     <script>
         let allConfigs = [];
         let isLoading = false;
+        let currentFilter = 'all';
 
         const elements = {
             loadBtn: document.getElementById('loadBtn'),
@@ -222,12 +231,11 @@
             setLoadingState(true);
 
             try {
-                // تغییر لینک به فایل عمومی شامل همه پروتکل‌ها
                 const response = await fetch('https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/v2ray/super-sub.txt');
                 if (!response.ok) throw new Error('خطا در دریافت فایل');
                 const text = await response.text();
+                console.log('محتوای فایل:', text);
 
-                // استخراج لینک‌های پروکسی
                 allConfigs = text.split('\n')
                     .filter(line => line.match(/^(vless|vmess|trojan|ss):\/\//))
                     .map((line, index) => {
@@ -278,6 +286,8 @@
                         return config;
                     });
 
+                console.log('کانفیگ‌های پارس‌شده:', allConfigs);
+
                 if (allConfigs.length === 0) {
                     elements.noResults.classList.remove('hidden');
                     elements.configList.innerHTML = '';
@@ -301,7 +311,17 @@
 
         const renderConfigs = () => {
             elements.configList.innerHTML = '';
-            allConfigs.forEach((config, index) => {
+            const filteredConfigs = currentFilter === 'all' 
+                ? allConfigs 
+                : allConfigs.filter(config => config.protocol === currentFilter);
+
+            if (filteredConfigs.length === 0) {
+                elements.noResults.classList.remove('hidden');
+                return;
+            }
+
+            elements.noResults.classList.add('hidden');
+            filteredConfigs.forEach((config, index) => {
                 const card = document.createElement('div');
                 card.className = 'proxy-card fade-in-up';
                 card.style.animationDelay = `${index * 0.05}s`;
@@ -366,7 +386,6 @@
                     };
                     await new Promise(resolve => setTimeout(resolve, 5000));
                 } else if (protocol === 'vmess' || protocol === 'ss') {
-                    // تست ساده HTTP برای VMess و Shadowsocks
                     const response = await fetch(`http://${address}:${port}`, { mode: 'no-cors' });
                     isConnected = true; // no-cors همیشه true برمی‌گردونه
                 }
@@ -448,8 +467,11 @@
         };
 
         const updateCounts = () => {
-            elements.configCount.textContent = allConfigs.length;
-            elements.activeCount.textContent = allConfigs.filter(c => c.status === 'good').length;
+            const filteredConfigs = currentFilter === 'all' 
+                ? allConfigs 
+                : allConfigs.filter(config => config.protocol === currentFilter);
+            elements.configCount.textContent = filteredConfigs.length;
+            elements.activeCount.textContent = filteredConfigs.filter(c => c.status === 'good').length;
         };
 
         const showToastNotification = (message, type = 'info') => {
@@ -471,6 +493,18 @@
             }, 4000);
         };
 
+        const addFilterEventListeners = () => {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    currentFilter = e.currentTarget.dataset.filter;
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('btn-active'));
+                    e.currentTarget.classList.add('btn-active');
+                    renderConfigs();
+                    updateCounts();
+                });
+            });
+        };
+
         document.addEventListener('mousemove', e => {
             const cards = document.querySelectorAll('.proxy-card');
             cards.forEach(card => {
@@ -483,13 +517,11 @@
         }, { passive: true });
 
         elements.loadBtn.addEventListener('click', loadConfig);
-        window.addEventListener('load', loadConfig);
+        window.addEventListener('load', () => {
+            loadConfig();
+            addFilterEventListeners();
+            document.querySelector('.filter-btn[data-filter="all"]').classList.add('btn-active');
+        });
     </script>
 </body>
 </html>
-
-
-
-
-
-
