@@ -223,7 +223,7 @@
 
             try {
                 // تغییر لینک به فایل عمومی شامل همه پروتکل‌ها
-                const response = await fetch('https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/filtered/subs/all_proxies.txt');
+                const response = await fetch('https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/v2ray/all_sub.txt');
                 if (!response.ok) throw new Error('خطا در دریافت فایل');
                 const text = await response.text();
 
@@ -487,3 +487,4 @@
     </script>
 </body>
 </html>
+
