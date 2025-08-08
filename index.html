@@ -309,7 +309,7 @@
         };
 
         const testServer = async (id, address, port) => {
-            const config = allConfigs.find(c => c.id === id Ascending);
+            const config = allConfigs.find(c => c.id === id);
             if (!config) return;
 
             const statusElement = document.getElementById(`ping-${id}`);
@@ -353,9 +353,14 @@
 
         const copyConfig = (id) => {
             const config = allConfigs.find(c => c.id === id);
+            if (!config) {
+                showToastNotification('❌ خطا در یافتن کانفیگ!', 'error');
+                return;
+            }
             navigator.clipboard.writeText(config.link).then(() => {
                 showToastNotification('✅ لینک VLESS با موفقیت کپی شد!', 'success');
-            }).catch(() => {
+            }).catch((err) => {
+                console.error('خطا در کپی:', err);
                 showToastNotification('❌ خطا در کپی کردن لینک!', 'error');
             });
         };
@@ -378,8 +383,18 @@
         };
 
         const addCardEventListeners = (scope = document) => {
-            scope.querySelectorAll('.ping-btn').forEach(btn => btn.addEventListener('click', e => testServer(parseInt(e.currentTarget.dataset.id), allConfigs.find(c => c.id === parseInt(e.currentTarget.dataset.id)).address, allConfigs.find(c => c.id === parseInt(e.currentTarget.dataset.id)).port)));
-            scope.querySelectorAll('.copy-btn').forEach(btn => btn.addEventListener('click', e => copyConfig(parseInt(e.currentTarget.dataset.id))));
+            scope.querySelectorAll('.ping-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    const config = allConfigs.find(c => c.id === id);
+                    testServer(id, config.address, config.port);
+                });
+            });
+            scope.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    copyConfig(parseInt(e.currentTarget.dataset.id));
+                });
+            });
         };
 
         const getStatusInfo = (status) => {
@@ -439,4 +454,3 @@
     </script>
 </body>
 </html>
-
