@@ -67,7 +67,7 @@
             configList.innerHTML = '<div class="loading-spinner"></div> در حال بارگذاری...';
 
             try {
-                const response = await fetch('https://drive.google.com/uc?id=1t6JEHK87a0U-jTzw3n_M7u_fKA2N1LTY&export=download#%E2%AD%90%EF%B8%8FFreeXrayVPN%E2%AD%90%EF%B8%8F');
+                const response = await fetch('https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/v2ray/super-sub.txt');
                 if (!response.ok) throw new Error('خطا در دریافت فایل');
                 const text = await response.text();
 
@@ -130,6 +130,7 @@
 </body>
 
 </html>
+
 
 
 
