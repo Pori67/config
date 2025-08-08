@@ -186,6 +186,10 @@
                             <i class="fa-solid fa-sync btn-icon transition-transform duration-300"></i>
                             <span>تغییر پروتکل</span>
                         </button>
+                        <a href="https://t.me/SOSkeyNET" class="btn btn-primary w-full md:w-auto px-6 py-3 text-base font-semibold flex items-center justify-center gap-2" target="_blank">
+                            <i class="fa-solid fa-paper-plane btn-icon"></i>
+                            <span>مشاهده کانال SOSkeyNET</span>
+                        </a>
                     </div>
                     <div class="flex gap-6 items-center">
                         <div class="text-center">
@@ -209,6 +213,13 @@
         </div>
 
         <div id="configList" class="proxy-grid"></div>
+
+        <section id="telegramSection" class="proxy-card p-6 mb-8 fade-in-up" style="animation-delay: 0.3s;">
+            <div class="card-content">
+                <h2 class="text-2xl font-bold text-white mb-4">به‌روزترین کانفیگ‌ها از کانال SOSkeyNET</h2>
+                <iframe src="https://t.me/s/SOSkeyNET" class="w-full h-[500px] rounded-md border border-gray-700"></iframe>
+            </div>
+        </section>
 
         <div id="noResults" class="text-center py-16 hidden">
             <div class="proxy-card p-12 inline-block">
@@ -543,47 +554,4 @@
                 info: 'bg-blue-600/80 border-blue-500',
             };
             notif.className = `fixed top-5 right-5 z-50 px-5 py-3 rounded-lg text-white font-semibold border-l-4 ${typeClasses[type]} proxy-card`;
-            notif.style.cssText = `transform: translateX(200%); transition: transform 0.5s ease;`;
-            notif.innerHTML = `<div class="card-content">${message}</div>`;
-            document.body.appendChild(notif);
-            setTimeout(() => notif.style.transform = 'translateX(0)', 10);
-            setTimeout(() => {
-                notif.style.transform = 'translateX(200%)';
-                notif.addEventListener('transitionend', () => notif.remove());
-            }, 4000);
-        };
-
-        const addProtocolEventListeners = () => {
-            document.querySelectorAll('.protocol-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    selectedProtocol = e.currentTarget.dataset.protocol;
-                    hideProtocolModal();
-                    loadConfig();
-                });
-            });
-        };
-
-        document.addEventListener('mousemove', e => {
-            const cards = document.querySelectorAll('.proxy-card');
-            cards.forEach(card => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
-            });
-        }, { passive: true });
-
-        elements.loadBtn.addEventListener('click', showProtocolModal);
-        elements.refreshBtn.addEventListener('click', showProtocolModal);
-        window.addEventListener('load', () => {
-            showProtocolModal();
-            addProtocolEventListeners();
-        });
-    </script>
-</body>
-</html>
-
-
-
-
+            notif.style.cssText = `transform: translate​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
