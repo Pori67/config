@@ -67,7 +67,7 @@
             configList.innerHTML = '<div class="loading-spinner"></div> در حال بارگذاری...';
 
             try {
-                const response = await fetch('https://raw.githubusercontent.com/barry-far/V2ray-config/main/All_Configs_base64_Sub.txt');
+                const response = await fetch('https://raw.githubusercontent.com/barry-far/V2ray-config/main/Splitted-By-Protocol/vless.txt');
                 if (!response.ok) throw new Error('خطا در دریافت فایل');
                 const text = await response.text();
 
@@ -130,5 +130,6 @@
 </body>
 
 </html>
+
 
 
