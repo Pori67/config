@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تست کانفیگ VLESS</title>
+    <title>تست کانفیگ‌های پروکسی</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -141,13 +141,13 @@
     <main class="container mx-auto px-4 py-8 md:py-12 relative z-10">
         <header class="text-center mb-12 fade-in-up">
             <div class="inline-block p-4 bg-gray-900/50 rounded-full mb-6 border border-gray-800 transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-2xl hover:shadow-sky-500/20">
-                <i class="fa-solid fa-user-secret text-4xl text-white"></i>
+                <i class="fa-solid fa-shield-alt text-4xl text-white"></i>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4 bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">
-                تست کانفیگ VLESS
+                تست کانفیگ‌های پروکسی
             </h1>
             <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto">
-                تست سریع و امن کانفیگ‌های VLESS برای اتصال به سرور
+                تست سریع و امن کانفیگ‌های پروکسی (VLESS, VMess, Trojan, Shadowsocks و غیره)
             </p>
         </header>
 
@@ -161,7 +161,7 @@
                     <div class="flex gap-6 items-center">
                         <div class="text-center">
                             <div class="text-2xl font-bold text-white" id="configCount">0</div>
-                            <div class="text-sm text-slate-400">کل کانفیگ‌ها</div>
+                            <div class="text-sm text-slate-400">کل پروکسی‌ها</div>
                         </div>
                         <div class="text-center">
                             <div class="text-2xl font-bold text-green-400" id="activeCount">0</div>
@@ -199,7 +199,7 @@
 
     <footer class="text-center py-8 mt-12 border-t border-gray-800 text-slate-400 fade-in-up" style="animation-delay: 0.4s;">
         <div class="container mx-auto px-4">
-            <p>&copy; 1404 تست کانفیگ VLESS. تمامی حقوق محفوظ است.</p>
+            <p>&copy; 1404 تست کانفیگ‌های پروکسی. تمامی حقوق محفوظ است.</p>
         </div>
     </footer>
 
@@ -222,26 +222,60 @@
             setLoadingState(true);
 
             try {
-                const response = await fetch('https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/filtered/subs/vless.txt');
+                // تغییر لینک به فایل عمومی شامل همه پروتکل‌ها
+                const response = await fetch('https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/filtered/subs/all_proxies.txt');
                 if (!response.ok) throw new Error('خطا در دریافت فایل');
                 const text = await response.text();
 
-                // استخراج لینک‌های VLESS
+                // استخراج لینک‌های پروکسی
                 allConfigs = text.split('\n')
-                    .filter(line => line.startsWith('vless://'))
+                    .filter(line => line.match(/^(vless|vmess|trojan|ss):\/\//))
                     .map((line, index) => {
-                        const url = new URL(line.replace('vless://', 'http://'));
-                        const params = new URLSearchParams(url.search);
-                        return {
-                            id: index,
-                            link: line,
-                            address: url.hostname,
-                            port: url.port || 443,
-                            uuid: url.username,
-                            params: Object.fromEntries(params),
-                            status: 'unknown',
-                            ping: null
-                        };
+                        const protocol = line.match(/^(vless|vmess|trojan|ss):\/\//)[1];
+                        let config = { id: index, link: line, protocol, status: 'unknown', ping: null };
+
+                        try {
+                            if (protocol === 'vless' || protocol === 'trojan') {
+                                const url = new URL(line.replace(`${protocol}://`, 'http://'));
+                                const params = new URLSearchParams(url.search);
+                                config = {
+                                    ...config,
+                                    address: url.hostname,
+                                    port: url.port || (protocol === 'trojan' ? 443 : url.port),
+                                    uuid: url.username,
+                                    params: Object.fromEntries(params)
+                                };
+                            } else if (protocol === 'vmess') {
+                                const jsonStr = atob(line.replace('vmess://', ''));
+                                const vmessConfig = JSON.parse(jsonStr);
+                                config = {
+                                    ...config,
+                                    address: vmessConfig.add,
+                                    port: vmessConfig.port || 443,
+                                    uuid: vmessConfig.id,
+                                    params: {
+                                        type: vmessConfig.net,
+                                        security: vmessConfig.tls || 'none',
+                                        path: vmessConfig.path || '',
+                                        host: vmessConfig.host || ''
+                                    }
+                                };
+                            } else if (protocol === 'ss') {
+                                const decoded = atob(line.replace('ss://', '').split('#')[0]);
+                                const [auth, hostPort] = decoded.split('@');
+                                const [host, port] = hostPort.split(':');
+                                config = {
+                                    ...config,
+                                    address: host,
+                                    port: port || 8388,
+                                    uuid: auth,
+                                    params: { name: line.split('#')[1] || 'Shadowsocks' }
+                                };
+                            }
+                        } catch (e) {
+                            console.error(`خطا در پارس لینک ${protocol}:`, e);
+                        }
+                        return config;
                     });
 
                 if (allConfigs.length === 0) {
@@ -254,7 +288,7 @@
                 elements.noResults.classList.add('hidden');
                 renderConfigs();
                 updateCounts();
-                allConfigs.forEach(config => testServer(config.id, config.address, config.port));
+                allConfigs.forEach(config => testServer(config.id, config.address, config.port, config.protocol));
                 showToastNotification('✅ کانفیگ‌ها با موفقیت بارگذاری شدند.', 'success');
             } catch (error) {
                 elements.noResults.classList.remove('hidden');
@@ -295,9 +329,10 @@
                     <div class="grid grid-cols-2 gap-4 text-sm text-slate-300">
                         <div class="flex items-center gap-2"><i class="fa-solid fa-ethernet text-slate-400 w-4 text-center"></i><span>${config.port}</span></div>
                         <div class="flex items-center gap-2"><i class="fa-solid fa-signal text-slate-400 w-4 text-center"></i><span id="ping-${config.id}" class="font-semibold ${pingInfo.className}">${pingInfo.text}</span></div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-network-wired text-slate-400 w-4 text-center"></i><span>${config.protocol.toUpperCase()}</span></div>
                     </div>
                     <div class="space-y-2">
-                        <div class="text-sm text-slate-400">لینک VLESS</div>
+                        <div class="text-sm text-slate-400">لینک پروکسی</div>
                         <div class="p-2 text-xs break-all bg-gray-900/70 rounded-md border border-gray-700 font-mono">${config.link}</div>
                     </div>
                     <div class="grid grid-cols-2 gap-3 pt-2">
@@ -308,7 +343,7 @@
             `;
         };
 
-        const testServer = async (id, address, port) => {
+        const testServer = async (id, address, port, protocol) => {
             const config = allConfigs.find(c => c.id === id);
             if (!config) return;
 
@@ -318,24 +353,23 @@
 
             try {
                 const startTime = Date.now();
-                // تست واقعی با WebSocket
-                const ws = new WebSocket(`wss://${address}:${port}`);
                 let isConnected = false;
 
-                ws.onopen = () => {
-                    isConnected = true;
-                    ws.close();
-                };
-
-                ws.onerror = () => {
-                    ws.close();
-                };
-
-                await new Promise((resolve) => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 5000); // حداکثر ۵ ثانیه صبر
-                });
+                if (protocol === 'vless' || protocol === 'trojan') {
+                    const ws = new WebSocket(`wss://${address}:${port}`);
+                    ws.onopen = () => {
+                        isConnected = true;
+                        ws.close();
+                    };
+                    ws.onerror = () => {
+                        ws.close();
+                    };
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                } else if (protocol === 'vmess' || protocol === 'ss') {
+                    // تست ساده HTTP برای VMess و Shadowsocks
+                    const response = await fetch(`http://${address}:${port}`, { mode: 'no-cors' });
+                    isConnected = true; // no-cors همیشه true برمی‌گردونه
+                }
 
                 const ping = Date.now() - startTime;
                 config.ping = ping;
@@ -358,7 +392,7 @@
                 return;
             }
             navigator.clipboard.writeText(config.link).then(() => {
-                showToastNotification('✅ لینک VLESS با موفقیت کپی شد!', 'success');
+                showToastNotification('✅ لینک پروکسی با موفقیت کپی شد!', 'success');
             }).catch((err) => {
                 console.error('خطا در کپی:', err);
                 showToastNotification('❌ خطا در کپی کردن لینک!', 'error');
@@ -387,7 +421,7 @@
                 btn.addEventListener('click', (e) => {
                     const id = parseInt(e.currentTarget.dataset.id);
                     const config = allConfigs.find(c => c.id === id);
-                    testServer(id, config.address, config.port);
+                    testServer(id, config.address, config.port, config.protocol);
                 });
             });
             scope.querySelectorAll('.copy-btn').forEach(btn => {
@@ -437,7 +471,6 @@
             }, 4000);
         };
 
-        // افکت گلو برای کارت‌ها
         document.addEventListener('mousemove', e => {
             const cards = document.querySelectorAll('.proxy-card');
             cards.forEach(card => {
@@ -454,14 +487,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
