@@ -216,8 +216,14 @@
 
         <section id="telegramSection" class="proxy-card p-6 mb-8 fade-in-up" style="animation-delay: 0.3s;">
             <div class="card-content">
-                <h2 class="text-2xl font-bold text-white mb-4">به‌روزترین کانفیگ‌ها از کانال SOSkeyNET</h2>
-                <iframe src="https://t.me/s/SOSkeyNET" class="w-full h-[500px] rounded-md border border-gray-700"></iframe>
+                <h2 class="text-2xl font-bold text-white mb-4">آخرین ۴۰ کانفیگ از کانال SOSkeyNET</h2>
+                <div id="configContainer" class="proxy-grid"></div>
+                <div id="noConfigs" class="text-center mt-4 hidden">
+                    <p class="text-slate-400 mb-2">هیچ کانفیگی یافت نشد! ممکن است به VPN نیاز داشته باشید.</p>
+                    <a href="https://t.me/SOSkeyNET" class="btn btn-primary px-6 py-3" target="_blank">
+                        <i class="fa-solid fa-eye mr-2"></i> مشاهده کانال در تلگرام
+                    </a>
+                </div>
             </div>
         </section>
 
@@ -271,6 +277,8 @@
             configList: document.getElementById('configList'),
             noResults: document.getElementById('noResults'),
             protocolModal: document.getElementById('protocolModal'),
+            configContainer: document.getElementById('configContainer'),
+            noConfigs: document.getElementById('noConfigs'),
         };
 
         const showProtocolModal = () => {
@@ -281,13 +289,68 @@
             elements.protocolModal.classList.add('hidden');
         };
 
+        const loadTelegramConfigs = async () => {
+            elements.status.classList.remove('hidden');
+            elements.configContainer.innerHTML = '';
+            elements.noConfigs.classList.add('hidden');
+
+            try {
+                // استفاده از پروکسی CORS برای دسترسی به تلگرام (به دلیل محدودیت‌ها)
+                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                const channelUrl = 'https://t.me/s/SOSkeyNET';
+                const response = await fetch(proxyUrl + channelUrl, {
+                    method: 'GET',
+                    headers: { 'Origin': 'https://yourdomain.com' } // جایگزین کن با دامنه خودت
+                });
+
+                if (!response.ok) throw new Error('خطا در دسترسی به کانال');
+
+                const text = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const posts = doc.getElementsByTagName('a'); // فرض می‌کنیم کانفیگ‌ها لینک هستن
+
+                const configs = [];
+                for (let link of posts) {
+                    const href = link.getAttribute('href');
+                    if (href && (href.startsWith('vless://') || href.startsWith('vmess://') || href.startsWith('trojan://') || href.startsWith('ss://'))) {
+                        configs.push(href);
+                        if (configs.length >= 40) break; // محدود کردن به 40 کانفیگ
+                    }
+                }
+
+                if (configs.length === 0) {
+                    elements.noConfigs.classList.remove('hidden');
+                    showToastNotification('⚠️ هیچ کانفیگی در کانال یافت نشد!', 'warning');
+                    return;
+                }
+
+                allConfigs = configs.map((link, index) => ({
+                    id: index,
+                    link: link,
+                    protocol: link.split('://')[0],
+                    status: 'unknown',
+                    ping: null
+                }));
+
+                renderConfigs();
+                updateCounts();
+                showToastNotification('✅ ۴۰ کانفیگ آخر با موفقیت بارگذاری شدند.', 'success');
+            } catch (error) {
+                console.error('خطا در لود کانفیگ‌ها:', error);
+                elements.noConfigs.classList.remove('hidden');
+                showToastNotification(`❌ خطا: ${error.message}`, 'error');
+            } finally {
+                elements.status.classList.add('hidden');
+            }
+        };
+
         const loadConfig = async () => {
             if (isLoading || !selectedProtocol) return;
             setLoadingState(true);
 
             try {
                 const startLoad = Date.now();
-                // استفاده از پراکسی CORS برای دور زدن محدودیت Google Drive
                 const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
                 const configUrl = 'https://github.com/barry-far/V2ray-Config/blob/main/Sub11.txt';
                 const response = await fetch(proxyUrl + configUrl);
@@ -296,22 +359,18 @@
                 console.log('زمان لود فایل:', Date.now() - startLoad, 'ms');
                 console.log('محتوای خام فایل:', text);
 
-                // تلاش برای دیکد Base64 (اگه فایل Base64 باشه)
                 let lines;
                 try {
                     const decodedText = atob(text.trim());
                     lines = decodedText.split('\n').filter(line => line.trim());
-                    console.log('محتوای دیکدشده Base64:', decodedText);
                 } catch (e) {
-                    // اگه Base64 نباشه، مستقیم خط‌ها رو می‌خونیم
                     lines = text.split('\n').filter(line => line.trim());
-                    console.log('محتوای غیر Base64:', text);
                 }
 
                 const startParse = Date.now();
                 allConfigs = lines
                     .filter(line => line.match(new RegExp(`^${selectedProtocol}://`)))
-                    .slice(0, 10) // محدود کردن به 10 کانفیگ
+                    .slice(0, 10)
                     .map((line, index) => {
                         const protocol = selectedProtocol;
                         let config = { id: index, link: line, protocol, status: 'unknown', ping: null };
@@ -413,14 +472,14 @@
                     <div class="flex items-start justify-between">
                         <div class="flex items-center gap-3">
                             <div class="w-3 h-3 rounded-full ${statusInfo.dotClass} ${statusInfo.pulseClass}" title="${statusInfo.text}"></div>
-                            <h3 class="font-bold text-lg text-white">${config.address}</h3>
+                            <h3 class="font-bold text-lg text-white">${config.address || 'نامشخص'}</h3>
                         </div>
                         <span class="status-badge ${statusInfo.className}">
                             <i class="${statusInfo.icon}"></i> ${statusInfo.text}
                         </span>
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-sm text-slate-300">
-                        <div class="flex items-center gap-2"><i class="fa-solid fa-ethernet text-slate-400 w-4 text-center"></i><span>${config.port}</span></div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-ethernet text-slate-400 w-4 text-center"></i><span>${config.port || 'نامشخص'}</span></div>
                         <div class="flex items-center gap-2"><i class="fa-solid fa-signal text-slate-400 w-4 text-center"></i><span id="ping-${config.id}" class="font-semibold ${pingInfo.className}">${pingInfo.text}</span></div>
                         <div class="flex items-center gap-2"><i class="fa-solid fa-network-wired text-slate-400 w-4 text-center"></i><span>${config.protocol.toUpperCase()}</span></div>
                     </div>
@@ -554,4 +613,44 @@
                 info: 'bg-blue-600/80 border-blue-500',
             };
             notif.className = `fixed top-5 right-5 z-50 px-5 py-3 rounded-lg text-white font-semibold border-l-4 ${typeClasses[type]} proxy-card`;
-            notif.style.cssText = `transform: translate​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
+            notif.style.cssText = `transform: translateX(200%); transition: transform 0.5s ease;`;
+            notif.innerHTML = `<div class="card-content">${message}</div>`;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.style.transform = 'translateX(0)', 10);
+            setTimeout(() => {
+                notif.style.transform = 'translateX(200%)';
+                notif.addEventListener('transitionend', () => notif.remove());
+            }, 4000);
+        };
+
+        const addProtocolEventListeners = () => {
+            document.querySelectorAll('.protocol-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    selectedProtocol = e.currentTarget.dataset.protocol;
+                    hideProtocolModal();
+                    loadConfig();
+                });
+            });
+        };
+
+        document.addEventListener('mousemove', e => {
+            const cards = document.querySelectorAll('.proxy-card');
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        }, { passive: true });
+
+        elements.loadBtn.addEventListener('click', showProtocolModal);
+        elements.refreshBtn.addEventListener('click', showProtocolModal);
+        window.addEventListener('load', () => {
+            showProtocolModal();
+            addProtocolEventListeners();
+            loadTelegramConfigs(); // لود ۴۰ کانفیگ آخر از کانال
+        });
+    </script>
+</body>
+</html>
