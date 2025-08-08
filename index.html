@@ -278,7 +278,7 @@
                 const startLoad = Date.now();
                 // استفاده از پراکسی CORS برای دور زدن محدودیت Google Drive
                 const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-                const configUrl = 'https://drive.google.com/uc?id=1t6JEHK87a0U-jTzw3n_M7u_fKA2N1LTY&export=download';
+                const configUrl = 'https://drive.google.com/uc?id=1t6JEHK87a0U-jTzw3n_M7u_fKA2N1LTY&export=download#VPN-links-64.sub';
                 const response = await fetch(proxyUrl + configUrl);
                 if (!response.ok) throw new Error('خطا در دریافت فایل');
                 const text = await response.text();
@@ -583,3 +583,4 @@
     </script>
 </body>
 </html>
+
