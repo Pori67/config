@@ -278,7 +278,7 @@
                 const startLoad = Date.now();
                 // استفاده از پراکسی CORS برای دور زدن محدودیت Google Drive
                 const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-                const configUrl = 'https://raw.githubusercontent.com/barry-far/V2ray-config/main/Sub1.txt';
+                const configUrl = 'https://raw.githubusercontent.com/barry-far/V2ray-config/main/Sub2.txt';
                 const response = await fetch(proxyUrl + configUrl);
                 if (!response.ok) throw new Error('خطا در دریافت فایل');
                 const text = await response.text();
@@ -583,5 +583,6 @@
     </script>
 </body>
 </html>
+
 
 
