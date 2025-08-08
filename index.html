@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تست کانفیگ VLESS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .config-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: right;
+        }
+        .status-good { color: green; }
+        .status-bad { color: red; }
+        .status-testing { color: orange; }
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>تست کانفیگ VLESS</h1>
+        <button onclick="loadConfig()">بارگذاری و تست کانفیگ‌ها</button>
+        <div id="configList"></div>
+    </div>
+
+    <script>
+        async function loadConfig() {
+            const configList = document.getElementById('configList');
+            configList.innerHTML = '<div class="loading-spinner"></div> در حال بارگذاری...';
+
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/refs/heads/main/Protocols/vless.txt');
+                if (!response.ok) throw new Error('خطا در دریافت فایل');
+                const text = await response.text();
+
+                // استخراج لینک‌های VLESS
+                const lines = text.split('\n').filter(line => line.startsWith('vless://'));
+                const servers = lines.map((line, index) => {
+                    const url = new URL(line.replace('vless://', 'http://')); // برای پردازش راحت‌تر
+                    const address = url.hostname;
+                    const port = url.port || 443; // پورت پیش‌فرض 443
+                    return { id: index, address, port };
+                });
+
+                if (servers.length === 0) {
+                    configList.innerHTML = '<p>هیچ کانفیگی یافت نشد!</p>';
+                    return;
+                }
+
+                configList.innerHTML = '';
+                servers.forEach(server => {
+                    const card = document.createElement('div');
+                    card.className = 'config-card';
+                    card.id = `server-${server.id}`;
+                    card.innerHTML = `
+                        <p><strong>آدرس:</strong> ${server.address}:${server.port}</p>
+                        <p><strong>وضعیت:</strong> <span id="status-${server.id}" class="status-testing">در حال تست...</span></p>
+                        <button onclick="testServer(${server.id}, '${server.address}', ${server.port})">تست دوباره</button>
+                    `;
+                    configList.appendChild(card);
+                    testServer(server.id, server.address, server.port);
+                });
+            } catch (error) {
+                configList.innerHTML = `<p style="color: red;">خطا: ${error.message}</p>`;
+            }
+        }
+
+        async function testServer(id, address, port) {
+            const statusElement = document.getElementById(`status-${id}`);
+            statusElement.textContent = 'در حال تست...';
+            statusElement.className = 'status-testing';
+
+            try {
+                // شبیه‌سازی تست پینگ (چون ICMP در مرورگر کار نمی‌کنه)
+                const startTime = Date.now();
+                await new Promise(resolve => setTimeout(resolve, Math.random() * 1000)); // تاخیر تصادفی
+                const ping = Date.now() - startTime;
+
+                if (ping < 500) {
+                    statusElement.textContent = `فعال (${ping}ms)`;
+                    statusElement.className = 'status-good';
+                } else {
+                    statusElement.textContent = `غیرفعال (${ping}ms)`;
+                    statusElement.className = 'status-bad';
+                }
+            } catch (error) {
+                statusElement.textContent = 'خطا در تست';
+                statusElement.className = 'status-bad';
+            }
+        }
+    </script>
+</body>
+</html>
